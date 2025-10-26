@@ -7,44 +7,14 @@
 #include "MonitorSerial.h"
 #include "defines.h"
 
-/**
- * @class Exobrazo
- * @brief El "Cerebro" de la aplicación.
- * Contiene la lógica principal, coordina los motores y señales,
- * y gestiona los modos de control (Prueba vs Web).
- */
 class Exobrazo {
 public:
-    // --- Componentes Públicos ---
-    // (Públicos para que la Tarea del Núcleo 1 pueda leerlos)
+    // --- 1. Componentes Públicos ---
     MonitorSerial monitor;
-    Motor* motores[3];
-
-    // --- Métodos Principales ---
-    Exobrazo();
-    void iniciar(); // Configuración secundaria
-    
-    /**
-     * @brief Bucle principal de lógica (se ejecuta en Núcleo 0).
-     */
-    void ejecutarCicloPrincipal();
-
-    // --- API DE CONTROL (para la Web) ---
-    
-    /**
-     * @brief (HUECO) Punto de entrada para comandos web.
-     * Toma el control del sistema (modo WEB).
-     */
-    void moverMotorWeb(int motorIndex, float aceleracion, uint32_t direccion, int pasos);
-
-    /**
-     * @brief (HUECO) Devuelve el control a los botones físicos (modo PRUEBA).
-     */
-    void setModoPrueba();
-
+    Motor* motores[3]; // Array de punteros
 
 private:
-    // --- Componentes Privados (Encapsulados) ---
+    // --- 2. Componentes Privados (en orden) ---
     Signal signalMotor1;
     Signal signalMotor2;
     Signal signalMotor3;
@@ -55,15 +25,20 @@ private:
     
     GSignal senalGeneral;
 
-    // --- Estado de la Aplicación ---
+    // --- 3. Estado de la Aplicación (en orden) ---
     enum class ModoControl { PRUEBA, WEB };
     ModoControl modoActual;
     
-    /**
-     * @brief Almacena la dirección de rebote (1 o -1) para el modo PRUEBA.
-     * (Equivalente a dirStates[3] de tu .ino)
-     */
     int dirEstadosPrueba[3];
+
+public:
+    Exobrazo();
+    void iniciar();
+    void ejecutarCicloPrincipal();
+
+    // --- API de Control (para la Web) ---
+    void moverMotorWeb(int motorIndex, float aceleracion, uint32_t direccion, int pasos);
+    void setModoPrueba();
 };
 
 #endif // EXOBRAZO_H
