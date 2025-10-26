@@ -1,10 +1,11 @@
 #include "Motor.h"
-#include <driver/gpio.h>
-#include <driver/adc.h>
-#include <esp_timer.h>
-#include <math.h>
-#include <esp_rom_sys.h>
+#include <math.h>         // Para M_PI, sqrt() y fminf()
+#include <esp_timer.h>    // Para esp_rom_delay_us()
+#include <esp_rom_sys.h>  // (Incluido en el original, esp_rom_delay_us puede estar aquí)
 
+
+
+// --- Constructor ---
 Motor::Motor(gpio_num_t step_pin, gpio_num_t dir_pin,
              adc1_channel_t adc_channel, Signal& signal,
              float accel_max, float vel_max, int pasos_por_rev,
@@ -15,99 +16,146 @@ Motor::Motor(gpio_num_t step_pin, gpio_num_t dir_pin,
       limite_min(limite_min), limite_max(limite_max),
       posicion_actual(0.0) {
     
+    // Configurar pines de control del motor como SALIDA
     gpio_set_direction(step_pin, GPIO_MODE_OUTPUT);
     gpio_set_direction(dir_pin, GPIO_MODE_OUTPUT);
     
-    adc1_config_width(ADC_WIDTH_BIT_12);
-    adc1_config_channel_atten(adc_channel, ADC_ATTEN_DB_11);
+    // Configurar el ADC para leer el potenciómetro
+    adc1_config_width(ADC_WIDTH_BIT_12); // Resolución de 12 bits (0-4095)
+    adc1_config_channel_atten(adc_channel, ADC_ATTEN_DB_11); // Atenuación para 0-3.3V
 }
 
-void Motor::activarMovimiento(float aceleracion, uint32_t direccion, int pasos) {
-    // 1. Validación de parámetros
-    if (pasos <= 0) return;
+// --- Método Principal de Movimiento ---
+void Motor::activarMovimiento(float aceleracion, uint32_t direccion, int pasos_totales) {
     
-    // 2. Limitar aceleración a la máxima del motor
+    // 1. Validación de parámetros
+    if (pasos_totales <= 0) return;
+
+    // 2. Capar la aceleración solicitada al límite físico del motor
     if (aceleracion > accel_max) {
         aceleracion = accel_max;
     }
-    
+    // Asegurar que la aceleración no sea cero para evitar división por cero
+    if (aceleracion <= 0) {
+        return; // Se cancela el movimiento
+    }
+
     // 3. Configurar dirección
     gpio_set_level(dir_pin, direccion);
-    
-    // 4. Calcular velocidad máxima usable (limitada por el motor y la aceleración)
-    float vel_max_usable = calcularVelocidadMaxima(aceleracion, pasos);
-    
-    // 5. Calcular pasos para cada fase del perfil trapezoidal
-    int pasos_aceleracion = calcularPasosAceleracion(aceleracion, vel_max_usable);
-    int pasos_desaceleracion = pasos_aceleracion;
-    int pasos_vel_constante = pasos - pasos_aceleracion - pasos_desaceleracion;
-    
-    // 6. Ajustar si no hay suficiente distancia para velocidad constante
-    if (pasos_vel_constante < 0) {
-        pasos_aceleracion = pasos / 2;
-        pasos_desaceleracion = pasos - pasos_aceleracion;
-        pasos_vel_constante = 0;
+
+    // =================================================================
+    // INICIO: Planificación de Movimiento en Unidades Angulares
+    // =================================================================
+
+    // 4. Convertir 'pasos' de entrada a 'radianes'
+    float despl_angular_total = (float)pasos_totales * (2.0 * M_PI) / (float)pasos_por_rev;
+
+    // 5. Calcular velocidad máxima usable (en rad/s)
+    //    Esta función ya capa la velocidad a 'vel_max'
+    float vel_max_usable = calcularVelocidadMaxima(aceleracion, despl_angular_total);
+
+    // 6. Calcular desplazamiento angular para la fase de aceleración (en rad)
+    float despl_aceleracion = calcularDesplazamientoAceleracion(aceleracion, vel_max_usable);
+    float despl_desaceleracion = despl_aceleracion; // perfil simétrico
+
+    // 7. Calcular desplazamiento angular para la fase de velocidad constante
+    float despl_vel_constante = despl_angular_total - despl_aceleracion - despl_desaceleracion;
+
+    // 8. Ajustar perfil (Triangular vs Trapezoidal)
+    if (despl_vel_constante < 0) {
+        // Perfil Triangular: No hay tiempo de alcanzar vel_max_usable
+        // La distancia es muy corta.
+        despl_aceleracion = despl_angular_total / 2.0;
+        despl_desaceleracion = despl_angular_total / 2.0;
+        despl_vel_constante = 0;
+        
+        // Recalculamos la velocidad máxima que SÍ se alcanzará (en el pico del triángulo)
+        vel_max_usable = sqrt(2.0 * aceleracion * despl_aceleracion);
     }
     
-    // 7. Calcular delays basados en la velocidad
-    int delay_min = (int)(1000000 / (2 * vel_max_usable)); // Delay para velocidad máxima
-    int delay_max = delay_min * 3; // Delay inicial más lento
+    // =================================================================
+    // FIN: Planificación de Movimiento
+    // =================================================================
+
+    // 9. Convertir desplazamientos angulares (rad) de nuevo a pasos (int)
+    int pasos_aceleracion = (int)(despl_aceleracion * (float)pasos_por_rev / (2.0 * M_PI));
+    int pasos_desaceleracion = (int)(despl_desaceleracion * (float)pasos_por_rev / (2.0 * M_PI));
+    // Ajustamos los pasos constantes para evitar errores de redondeo
+    int pasos_vel_constante = pasos_totales - pasos_aceleracion - pasos_desaceleracion;
+
+
+    // 10. Calcular Delays (en microsegundos)
     
-    // 8. Aplicar límites de seguridad a los delays
-    if (delay_min < 100) delay_min = 100;   // Máximo ~5000 pasos/segundo
-    if (delay_max > 5000) delay_max = 5000; // Mínimo ~100 pasos/segundo
+    // Convertir velocidad máxima (rad/s) a (pasos/segundo)
+    float vel_max_pasos = vel_max_usable * (float)pasos_por_rev / (2.0 * M_PI);
+
+    // Calcular delay para la velocidad máxima (tiempo entre flancos del pulso)
+    // delay = 1 / (frecuencia * 2) = 1 / (pasos_por_seg * 2)
+    int delay_min = (int)(1000000.0 / (2.0 * vel_max_pasos));
     
-    // 9. Ejecutar las tres fases del movimiento
-    
-    // Fase 1: Aceleración (disminuir delay gradualmente)
+    // Establecer un delay inicial más lento para la rampa de aceleración
+    int delay_max = delay_min * 3; // (Valor ajustable, 3x más lento)
+
+    // 11. Aplicar límites de seguridad a los delays
+    if (delay_min < 100) delay_min = 100;   // Límite máx de frec: ~5000 pasos/seg
+    if (delay_max > 5000) delay_max = 5000; // Límite mín de frec: ~100 pasos/seg
+    if (delay_max < delay_min) delay_max = delay_min * 1.5; // Asegurar que max > min
+
+    // 12. Ejecutar las tres fases del movimiento
+    int delay_actual;
+
+    // Fase 1: Aceleración (disminuir delay linealmente)
     for (int i = 0; i < pasos_aceleracion; i++) {
-        int delay_actual = delay_max - (delay_max - delay_min) * i / pasos_aceleracion;
+        // Interpola linealmente el delay
+        delay_actual = delay_max - (long)(delay_max - delay_min) * i / pasos_aceleracion;
         ejecutarPaso(delay_actual);
     }
-    
+
     // Fase 2: Velocidad constante
     for (int i = 0; i < pasos_vel_constante; i++) {
         ejecutarPaso(delay_min);
     }
-    
-    // Fase 3: Desaceleración (aumentar delay gradualmente)
+
+    // Fase 3: Desaceleración (aumentar delay linealmente)
     for (int i = 0; i < pasos_desaceleracion; i++) {
-        int delay_actual = delay_min + (delay_max - delay_min) * i / pasos_desaceleracion;
+        // Interpola linealmente el delay
+        delay_actual = delay_min + (long)(delay_max - delay_min) * i / pasos_desaceleracion;
         ejecutarPaso(delay_actual);
     }
-    
-    // 10. Actualizar posición actual
+
+    // 13. Actualizar posición actual
     posicion_actual = leerPosicion();
 }
 
-float Motor::calcularVelocidadMaxima(float aceleracion, int pasos) {
-    // Calcular velocidad máxima alcanzable con la aceleración dada
-    float vel_max_aceleracion = sqrt(2 * aceleracion * pasos);
+// --- Funciones de Ayuda (Implementación) ---
+
+float Motor::calcularVelocidadMaxima(float aceleracion, float despl_angular_total) {
+    // Calcular velocidad máxima teórica basada en la distancia (v² = 2*a*s)
+    float vel_max_teorica = sqrt(2.0 * aceleracion * despl_angular_total);
     
-    // Convertir velocidad máxima del motor (rad/s) a pasos/segundo
-    float vel_max_motor_pasos = vel_max * (pasos_por_rev / (2 * M_PI));
-    
-    // Usar la menor de las dos velocidades
-    float vel_max_usable = (vel_max_aceleracion < vel_max_motor_pasos) ? 
-                           vel_max_aceleracion : vel_max_motor_pasos;
-    
-    return vel_max_usable;
+    // Devolver la velocidad más baja: la teórica o el límite físico del motor
+    return fminf(vel_max_teorica, vel_max);
 }
 
-int Motor::calcularPasosAceleracion(float aceleracion, float vel_max_usable) {
-    // Calcular pasos necesarios para alcanzar la velocidad máxima
-    // usando la fórmula: v² = 2 * a * s
-    return (int)((vel_max_usable * vel_max_usable) / (2 * aceleracion));
+float Motor::calcularDesplazamientoAceleracion(float aceleracion, float vel_max_usable) {
+    // Calcular distancia angular necesaria para alcanzar la vel_max_usable (s = v² / (2*a))
+    return (vel_max_usable * vel_max_usable) / (2.0 * aceleracion);
 }
 
 float Motor::leerPosicion() {
+    // Leer el valor crudo del ADC (0-4095)
     int adc_val = adc1_get_raw(adc_channel);
-    // Convertir valor ADC a grados (0-300° típico para potenciómetros)
-    float posicion_grados = (adc_val / 4095.0) * 300.0;
+    
+    // Convertir valor ADC a grados (mapeo lineal)
+    // Asumimos que el rango completo 0-4095 corresponde a 0-300 grados
+    // (Este rango de 300° es común en potenciómetros, ajustar si es necesario)
+    float posicion_grados = (adc_val / 4095.0) * 300.0; 
+    
     return posicion_grados;
 }
 
 void Motor::ejecutarPaso(int delay_us) {
+    // Generar un pulso cuadrado en el pin de 'step'
     gpio_set_level(step_pin, 1);
     esp_rom_delay_us(delay_us);
     gpio_set_level(step_pin, 0);
