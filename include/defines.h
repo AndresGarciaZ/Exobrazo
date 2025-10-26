@@ -51,8 +51,7 @@
 #define VEL_MAX_M3    0.8f   // (rad/s)
 
 // --- PARÁMETROS DE PRUEBA (Rebote) ---
-// Aceleración y pasos ESTÁNDAR para la prueba de botones
-#define ACCEL_PRUEBA_STD  2.0f  // Aceleración estándar (ej: 2.0 rad/s²)
-#define PASOS_PRUEBA_STD  50    // Pasos por movimiento (ej: 50 pasos)
+#define ACCEL_PRUEBA_STD  2.0f  // Aceleración estándar
+#define ANGULO_PRUEBA_STD 20.0f // El incremento en GRADOS
 
 #endif // DEFINES_H
