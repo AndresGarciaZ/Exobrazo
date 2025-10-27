@@ -5,16 +5,16 @@
 #include <driver/adc.h>
 
 // --- PINES DE MOTORES ---
-#define STEP_PIN_1  GPIO_NUM_12 // Motor 1
-#define DIR_PIN_1   GPIO_NUM_14
+#define STEP_PIN_1  GPIO_NUM_23 // Motor 1
+#define DIR_PIN_1   GPIO_NUM_22
 #define ADC_PIN_1   ADC1_CHANNEL_7 // GPIO 35 (potPins[0])
 
 #define STEP_PIN_2  GPIO_NUM_16 // Motor 2
 #define DIR_PIN_2   GPIO_NUM_17
 #define ADC_PIN_2   ADC1_CHANNEL_4 // GPIO 32 (potPins[1])
 
-#define STEP_PIN_3  GPIO_NUM_13 // Motor 3
-#define DIR_PIN_3   GPIO_NUM_15
+#define STEP_PIN_3  GPIO_NUM_18 // Motor 3
+#define DIR_PIN_3   GPIO_NUM_19
 #define ADC_PIN_3   ADC1_CHANNEL_5 // GPIO 33 (potPins[2])
 
 // --- PINES DE SEÑALES (Basado en tu .ino de prueba) ---
@@ -29,7 +29,7 @@
 #define LIM_MIN_M2    -100.0f
 #define LIM_MAX_M2    80.0f
 #define LIM_MIN_M3    0.0f    // Límite "mínimo" (lógica invertida)
-#define LIM_MAX_M3    -100.0f // Límite "máximo" (lógica invertida)
+#define LIM_MAX_M3    .0f // Límite "máximo" (lógica invertida)
 
 // --- PARÁMETROS DE DATASHEET ---
 

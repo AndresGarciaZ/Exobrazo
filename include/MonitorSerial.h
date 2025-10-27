@@ -6,28 +6,24 @@
 class MonitorSerial {
 public:
     MonitorSerial();
-    
-    /**
-     * @brief Inicializa el monitor. En ESP-IDF, la UART ya está
-     * inicializada por defecto, así que solo imprime un saludo.
-     */
     void iniciarMonitor();
-
-    /**
-     * @brief Esta es la función principal del Núcleo 1.
-     * Imprime la tabla de estado usando printf.
-     */
     void actualizarDatos(Motor* motores[3]);
-
-    /**
-     * @brief Recibe las direcciones desde el Núcleo 0 (Exobrazo)
-     * para mostrarlas de forma segura.
-     */
     void actualizarDirecciones(int* dirEstado);
 
+    /**
+     * @brief (NUEVO) Recibe el estado actual de los botones
+     * desde el Núcleo 0 de forma segura.
+     * @param estadosBotones Un arreglo de 3 booleanos (true=presionado).
+     */
+    void actualizarBotones(bool* estadosBotones);
+
 private:
-    // Copia segura de las direcciones para evitar conflictos entre núcleos
-    int dirEstadosCopia[3]; 
+    int dirEstadosCopia[3];
+    
+    /**
+     * @brief (NUEVO) Almacenamiento seguro para el estado de los botones.
+     */
+    bool botonesCopia[3];
 };
 
 #endif // MONITORSERIAL_H

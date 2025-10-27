@@ -7,15 +7,11 @@
 
 class Motor {
 
-// --- ORDEN DE DECLARACIÓN CORREGIDO ---
-// Este orden ahora coincide exactamente con la lista
-// de inicialización de tu Motor.cpp (prompt 48)
-
 private:
     // --- 1. Variables privadas (en orden) ---
     gpio_num_t step_pin;
     gpio_num_t dir_pin;
-    adc1_channel_t adc_channel; 
+    adc1_channel_t adc_channel_RESERVED; 
 
 public:
     // --- 2. Variables públicas (en orden) ---
@@ -39,13 +35,13 @@ public:
     /**
      * @brief Constructor de la clase Motor.
      */
-    Motor(gpio_num_t step_pin, gpio_num_t dir_pin,
-          adc1_channel_t adc_channel, Signal& signal,
+ Motor(gpio_num_t step_pin, gpio_num_t dir_pin,
+          Signal& signal,
           float accel_max, float vel_max, int pasos_por_rev,
           float limite_min, float limite_max);
 
     void activarMovimiento(float aceleracion, uint32_t direccion, int pasos);
-    float leerPosicion();
+    float leerPosicion(adc1_channel_t channel);
 
     // --- Getters 
     float getLimiteMin() const { return limite_min; }

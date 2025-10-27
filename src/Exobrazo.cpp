@@ -3,30 +3,36 @@
 // --- CONSTRUCTOR CORREGIDO ---
 Exobrazo::Exobrazo() :
     monitor(),
+    // Los constructores de Signal no cambian
+    signalMotor1(SIGNAL_PIN_1, ACCEL_PRUEBA_STD, 0),
+    signalMotor2(SIGNAL_PIN_2, ACCEL_PRUEBA_STD, 0),
+    signalMotor3(SIGNAL_PIN_3, ACCEL_PRUEBA_STD, 0),
 
-    // ¡CORRECCIÓN AQUÍ!
-    // Pasamos '0' como el número de pasos, ya que
-    // ejecutarCicloPrincipal calculará los suyos propios.
-    signalMotor1(SIGNAL_PIN_1, ACCEL_PRUEBA_STD, 0 /*PASOS_PRUEBA_STD*/),
-    signalMotor2(SIGNAL_PIN_2, ACCEL_PRUEBA_STD, 0 /*PASOS_PRUEBA_STD*/),
-    signalMotor3(SIGNAL_PIN_3, ACCEL_PRUEBA_STD, 0 /*PASOS_PRUEBA_STD*/),
-
-    // El resto de la inicialización está bien
-    motor1(STEP_PIN_1, DIR_PIN_1, (adc1_channel_t)ADC_CHANNEL_7, signalMotor1, 
+    // --- CONSTRUCTORES DE MOTOR MODIFICADOS ---
+    // (Ya no pasamos el canal ADC)
+    motor1(STEP_PIN_1, DIR_PIN_1, signalMotor1, 
            ACCEL_MAX_M1, VEL_MAX_M1, PASOS_REV_M1, LIM_MIN_M1, LIM_MAX_M1),
-    motor2(STEP_PIN_2, DIR_PIN_2, (adc1_channel_t)ADC_CHANNEL_4, signalMotor2, 
+    motor2(STEP_PIN_2, DIR_PIN_2, signalMotor2, 
            ACCEL_MAX_M2, VEL_MAX_M2, PASOS_REV_M2, LIM_MIN_M2, LIM_MAX_M2),
-    motor3(STEP_PIN_3, DIR_PIN_3, (adc1_channel_t)ADC_CHANNEL_5, signalMotor3, 
+    motor3(STEP_PIN_3, DIR_PIN_3, signalMotor3, 
            ACCEL_MAX_M3, VEL_MAX_M3, PASOS_REV_M3, LIM_MIN_M3, LIM_MAX_M3),
+    
     senalGeneral(GSIGNAL_PIN),
     modoActual(ModoControl::PRUEBA)
 {
     motores[0] = &motor1;
     motores[1] = &motor2;
     motores[2] = &motor3;
+    
     dirEstadosPrueba[0] = 1;
     dirEstadosPrueba[1] = 1;
     dirEstadosPrueba[2] = 1;
+
+    // --- NUEVO ---
+    // Guardamos los pines ADC aquí
+    adc_pins[0] = (adc1_channel_t)ADC_CHANNEL_7; // M1 (GPIO 35)
+    adc_pins[1] = (adc1_channel_t)ADC_CHANNEL_4; // M2 (GPIO 32)
+    adc_pins[2] = (adc1_channel_t)ADC_CHANNEL_5; // M3 (GPIO 33)
 }
 
 // iniciar() (sin cambios)
@@ -42,8 +48,17 @@ void Exobrazo::ejecutarCicloPrincipal() {
     
     // 1. Siempre actualizar la posición
     for (int i = 0; i < 3; i++) {
-        motores[i]->leerPosicion(); 
+        motores[i]->leerPosicion(adc_pins[i]); 
     }
+
+    bool estadosBotonesActuales[3];
+    for (int i = 0; i < 3; i++) {
+        // Leemos directamente el estado de la señal
+        estadosBotonesActuales[i] = motores[i]->signal.obtenerEstado(); 
+    }
+    monitor.actualizarBotones(estadosBotonesActuales);
+    monitor.actualizarDirecciones(dirEstadosPrueba);
+    monitor.actualizarDatos(motores);
 
     // 2. Ignorar botones si estamos en modo Web
     if (modoActual == ModoControl::WEB) {
@@ -72,6 +87,7 @@ void Exobrazo::ejecutarCicloPrincipal() {
                 if (posActual >= limMax) dirEstadosPrueba[i] = -1;
                 else if (posActual <= limMin) dirEstadosPrueba[i] = 1;
             }
+
 
             // Obtenemos los pasos por revolución de este motor específico
             int pasos_por_rev = motores[i]->getPasosPorRev();

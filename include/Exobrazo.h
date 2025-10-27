@@ -24,6 +24,7 @@ private:
     Motor motor3;
     
     GSignal senalGeneral;
+    adc1_channel_t adc_pins[3];
 
     // --- 3. Estado de la Aplicación (en orden) ---
     enum class ModoControl { PRUEBA, WEB };

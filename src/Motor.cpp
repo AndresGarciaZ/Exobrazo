@@ -7,22 +7,20 @@
 
 // --- Constructor ---
 Motor::Motor(gpio_num_t step_pin, gpio_num_t dir_pin,
-             adc1_channel_t adc_channel, Signal& signal,
+             Signal& signal,
              float accel_max, float vel_max, int pasos_por_rev,
              float limite_min, float limite_max)
     : step_pin(step_pin), dir_pin(dir_pin), 
-      adc_channel(adc_channel), signal(signal),
+      signal(signal),
       accel_max(accel_max), vel_max(vel_max), pasos_por_rev(pasos_por_rev),
       limite_min(limite_min), limite_max(limite_max),
       posicion_actual(0.0) {
     
-    // Configurar pines de control del motor como SALIDA
+    // Configurar pines de control del motor
     gpio_set_direction(step_pin, GPIO_MODE_OUTPUT);
     gpio_set_direction(dir_pin, GPIO_MODE_OUTPUT);
     
-    // Configurar el ADC para leer el potenciómetro
-    adc1_config_width(ADC_WIDTH_BIT_12); // Resolución de 12 bits (0-4095)
-    adc1_config_channel_atten(adc_channel, ADC_ATTEN_DB_11); // Atenuación para 0-3.3V
+    // --- ¡YA NO CONFIGURAMOS EL ADC AQUÍ! ---
 }
 
 // --- Método Principal de Movimiento ---
@@ -124,7 +122,7 @@ void Motor::activarMovimiento(float aceleracion, uint32_t direccion, int pasos_t
     }
 
     // 13. Actualizar posición actual
-    posicion_actual = leerPosicion();
+    posicion_actual = leerPosicion(adc_channel_RESERVED);
 }
 
 // --- Funciones de Ayuda (Implementación) ---
@@ -142,16 +140,17 @@ float Motor::calcularDesplazamientoAceleracion(float aceleracion, float vel_max_
     return (vel_max_usable * vel_max_usable) / (2.0 * aceleracion);
 }
 
-float Motor::leerPosicion() {
-    // Leer el valor crudo del ADC (0-4095)
-    int adc_val = adc1_get_raw(adc_channel);
+float Motor::leerPosicion(adc1_channel_t channel) {
+    // Lee el canal ADC específico que se le pasa
+    int adc_val = adc1_get_raw(channel);
     
-    // Convertir valor ADC a grados (mapeo lineal)
-    // Asumimos que el rango completo 0-4095 corresponde a 0-300 grados
-    // (Este rango de 300° es común en potenciómetros, ajustar si es necesario)
-    float posicion_grados = (adc_val / 4095.0) * 300.0; 
+    // Mapeo corregido (de -135 a 135)
+    float posicion_grados = (adc_val / 4095.0f) * 270.0f - 135.0f;
     
-    return posicion_grados;
+    // Actualizamos la variable interna
+    this->posicion_actual = posicion_grados;
+    
+    return this->posicion_actual;
 }
 
 void Motor::ejecutarPaso(int delay_us) {

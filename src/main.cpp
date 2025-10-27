@@ -52,6 +52,13 @@ void mainLogicTask(void *pvParameters) {
 extern "C" void app_main(void) {
     
     printf("Iniciando app_main()...\n");
+    // --- ¡INICIALIZACIÓN GLOBAL DE ADC1! ---
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    // Configuramos *todos* los canales que usamos con la misma atenuación
+    adc1_config_channel_atten((adc1_channel_t)ADC_CHANNEL_7, ADC_ATTEN_DB_11);
+    adc1_config_channel_atten((adc1_channel_t)ADC_CHANNEL_4, ADC_ATTEN_DB_11);
+    adc1_config_channel_atten((adc1_channel_t)ADC_CHANNEL_5, ADC_ATTEN_DB_11);
+    // --- FIN INICIALIZACIÓN ADC ---
     
     // 1. Inicializar el objeto Exobrazo
     // (Esto vincula GSignal a las Signals)
