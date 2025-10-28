@@ -7,14 +7,17 @@
 // --- PINES DE MOTORES ---
 #define STEP_PIN_1  GPIO_NUM_23 // Motor 1
 #define DIR_PIN_1   GPIO_NUM_22
+#define ENABLE_PIN_1 GPIO_NUM_21 // Habilitación del motor 1
 #define ADC_PIN_1   ADC1_CHANNEL_7 // GPIO 35 (potPins[0])
 
 #define STEP_PIN_2  GPIO_NUM_16 // Motor 2
 #define DIR_PIN_2   GPIO_NUM_17
+#define ENABLE_PIN_2 GPIO_NUM_5 // Habilitación del motor 2
 #define ADC_PIN_2   ADC1_CHANNEL_4 // GPIO 32 (potPins[1])
 
 #define STEP_PIN_3  GPIO_NUM_18 // Motor 3
 #define DIR_PIN_3   GPIO_NUM_19
+#define ENABLE_PIN_3 GPIO_NUM_4 // Habilitación del motor 3
 #define ADC_PIN_3   ADC1_CHANNEL_5 // GPIO 33 (potPins[2])
 
 // --- PINES DE SEÑALES (Basado en tu .ino de prueba) ---

@@ -6,11 +6,11 @@
 
 
 // --- Constructor ---
-Motor::Motor(gpio_num_t step_pin, gpio_num_t dir_pin,
+Motor::Motor(gpio_num_t step_pin, gpio_num_t dir_pin, gpio_num_t enable_pin,
              Signal& signal,
              float accel_max, float vel_max, int pasos_por_rev,
              float limite_min, float limite_max)
-    : step_pin(step_pin), dir_pin(dir_pin), 
+    : step_pin(step_pin), dir_pin(dir_pin), enable_pin(enable_pin),
       signal(signal),
       accel_max(accel_max), vel_max(vel_max), pasos_por_rev(pasos_por_rev),
       limite_min(limite_min), limite_max(limite_max),
@@ -19,6 +19,7 @@ Motor::Motor(gpio_num_t step_pin, gpio_num_t dir_pin,
     // Configurar pines de control del motor
     gpio_set_direction(step_pin, GPIO_MODE_OUTPUT);
     gpio_set_direction(dir_pin, GPIO_MODE_OUTPUT);
+    gpio_set_direction(enable_pin, GPIO_MODE_OUTPUT);
     
     // --- ¡YA NO CONFIGURAMOS EL ADC AQUÍ! ---
 }
@@ -159,4 +160,12 @@ void Motor::ejecutarPaso(int delay_us) {
     esp_rom_delay_us(delay_us);
     gpio_set_level(step_pin, 0);
     esp_rom_delay_us(delay_us);
+}
+
+void Motor::habilitar() {
+    gpio_set_level(enable_pin, 0);
+}
+
+void Motor::deshabilitar() {
+    gpio_set_level(enable_pin, 1);
 }

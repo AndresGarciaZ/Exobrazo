@@ -12,6 +12,7 @@ private:
     gpio_num_t step_pin;
     gpio_num_t dir_pin;
     adc1_channel_t adc_channel_RESERVED; 
+    gpio_num_t enable_pin;
 
 public:
     // --- 2. Variables públicas (en orden) ---
@@ -35,7 +36,7 @@ public:
     /**
      * @brief Constructor de la clase Motor.
      */
- Motor(gpio_num_t step_pin, gpio_num_t dir_pin,
+ Motor(gpio_num_t step_pin, gpio_num_t dir_pin, gpio_num_t enable_pin,
           Signal& signal,
           float accel_max, float vel_max, int pasos_por_rev,
           float limite_min, float limite_max);
@@ -54,6 +55,8 @@ private:
     void ejecutarPaso(int delay_us);
     float calcularVelocidadMaxima(float aceleracion, float despl_angular_total);
     float calcularDesplazamientoAceleracion(float aceleracion, float vel_max_usable);
+    void habilitar();
+    void deshabilitar();
 };
 
 #endif // MOTOR_H
