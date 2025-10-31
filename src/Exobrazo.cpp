@@ -10,11 +10,11 @@ Exobrazo::Exobrazo() :
 
     // --- CONSTRUCTORES DE MOTOR MODIFICADOS ---
     // (Ya no pasamos el canal ADC)
-    motor1(STEP_PIN_1, DIR_PIN_1, signalMotor1, 
+    motor1(STEP_PIN_1, DIR_PIN_1, ENABLE_PIN_1, signalMotor1, 
            ACCEL_MAX_M1, VEL_MAX_M1, PASOS_REV_M1, LIM_MIN_M1, LIM_MAX_M1),
-    motor2(STEP_PIN_2, DIR_PIN_2, signalMotor2, 
+    motor2(STEP_PIN_2, DIR_PIN_2, ENABLE_PIN_2, signalMotor2, 
            ACCEL_MAX_M2, VEL_MAX_M2, PASOS_REV_M2, LIM_MIN_M2, LIM_MAX_M2),
-    motor3(STEP_PIN_3, DIR_PIN_3, signalMotor3, 
+    motor3(STEP_PIN_3, DIR_PIN_3, ENABLE_PIN_3, signalMotor3, 
            ACCEL_MAX_M3, VEL_MAX_M3, PASOS_REV_M3, LIM_MIN_M3, LIM_MAX_M3),
     
     senalGeneral(GSIGNAL_PIN),
