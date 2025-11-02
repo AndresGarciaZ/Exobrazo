@@ -10,11 +10,11 @@ Exobrazo::Exobrazo() :
 
     // --- CONSTRUCTORES DE MOTOR MODIFICADOS ---
     // (Ya no pasamos el canal ADC)
-    motor1(STEP_PIN_1, DIR_PIN_1, signalMotor1, 
+    motor1(STEP_PIN_1, DIR_PIN_1, ENABLE_PIN_1, signalMotor1, 
            ACCEL_MAX_M1, VEL_MAX_M1, PASOS_REV_M1, LIM_MIN_M1, LIM_MAX_M1),
-    motor2(STEP_PIN_2, DIR_PIN_2, signalMotor2, 
+    motor2(STEP_PIN_2, DIR_PIN_2, ENABLE_PIN_2, signalMotor2, 
            ACCEL_MAX_M2, VEL_MAX_M2, PASOS_REV_M2, LIM_MIN_M2, LIM_MAX_M2),
-    motor3(STEP_PIN_3, DIR_PIN_3, signalMotor3, 
+    motor3(STEP_PIN_3, DIR_PIN_3, ENABLE_PIN_3, signalMotor3, 
            ACCEL_MAX_M3, VEL_MAX_M3, PASOS_REV_M3, LIM_MIN_M3, LIM_MAX_M3),
     
     senalGeneral(GSIGNAL_PIN),
@@ -110,19 +110,30 @@ void Exobrazo::ejecutarCicloPrincipal() {
     } 
 }
 
-//Implementación del getter modoActual
-Exobrazo::ModoControl Exobrazo::getModoActual() const {
- return this->modoActual;
-}
-
 // --- API DE CONTROL (HUECOS PARA LA WEB) ---
 // (Sin cambios)
 void Exobrazo::moverMotorWeb(int motorIndex, float aceleracion, uint32_t direccion, int pasos) {
-    this->modoActual = ModoControl::WEB;
+    // this->modoActual = ModoControl::WEB;
     if (motorIndex < 0 || motorIndex > 2) return;
     motores[motorIndex]->activarMovimiento(aceleracion, direccion, pasos);
 }
 
 void Exobrazo::setModoPrueba() {
     this->modoActual = ModoControl::PRUEBA;
+
+}
+/**
+ * @brief Pone el sistema en modo WEB.
+ * (Llamado por mainLogicTask y moverMotorWeb)
+ */
+void Exobrazo::setModoWeb() {
+    this->modoActual = ModoControl::WEB;
+}
+
+/**
+ * @brief Devuelve el modo de control actual.
+ * (Llamado por el status_handler en main.cpp)
+ */
+Exobrazo::ModoControl Exobrazo::getModoActual() const {
+    return this->modoActual;
 }
