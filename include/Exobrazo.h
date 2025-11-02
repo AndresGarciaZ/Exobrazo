@@ -40,6 +40,9 @@ public:
     // --- API de Control (para la Web) ---
     void moverMotorWeb(int motorIndex, float aceleracion, uint32_t direccion, int pasos);
     void setModoPrueba();
+
+    //getter modoActual
+    ModoControl getModoActual() const;
 };
 
 #endif // EXOBRAZO_H

@@ -110,6 +110,11 @@ void Exobrazo::ejecutarCicloPrincipal() {
     } 
 }
 
+//Implementación del getter modoActual
+Exobrazo::ModoControl Exobrazo::getModoActual() const {
+ return this->modoActual;
+}
+
 // --- API DE CONTROL (HUECOS PARA LA WEB) ---
 // (Sin cambios)
 void Exobrazo::moverMotorWeb(int motorIndex, float aceleracion, uint32_t direccion, int pasos) {
