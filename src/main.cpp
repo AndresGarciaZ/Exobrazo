@@ -265,6 +265,35 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
     }
 }
 
+// Inicializar Wi-Fi en modo AP (punto de acceso)
+void wifi_init_ap(void) {
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_ap();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    wifi_config_t wifi_config = {};
+    strcpy((char*)wifi_config.ap.ssid, WIFI_SSID);
+    wifi_config.ap.ssid_len = strlen(WIFI_SSID);
+    strcpy((char*)wifi_config.ap.password, WIFI_PASSWORD);
+    wifi_config.ap.channel = 1;
+    wifi_config.ap.max_connection = 4;
+    wifi_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
+
+    if (strlen(WIFI_PASSWORD) == 0) {
+        wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+    }
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    ESP_LOGI(TAG_WIFI, "WiFi AP iniciado. SSID:%s password:%s", WIFI_SSID, WIFI_PASSWORD);
+}
+
+/*
 void wifi_init_sta(void) {
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -289,7 +318,7 @@ void wifi_init_sta(void) {
     
     ESP_LOGI(TAG_WIFI, "wifi_init_sta finalizado.");
 }
-
+*/
 // --- 5. Punto de Entrada Principal (app_main) ---
 extern "C" void app_main(void) {
     
@@ -306,7 +335,7 @@ extern "C" void app_main(void) {
     ESP_ERROR_CHECK(ret);
     
     // --- 2. Conectar a Wi-Fi ---
-    wifi_init_sta();
+    wifi_init_ap(); // Modo Punto de Acceso
     
     // --- 3. Inicialización Global de ADC (Tu código original) ---
     adc1_config_width(ADC_WIDTH_BIT_12);
