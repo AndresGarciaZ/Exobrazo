@@ -37,10 +37,10 @@
 // --- PARÁMETROS DE DATASHEET ---
 
 // Motor 1 (42SHDC3025-24B)
-// Datasheet: 1.8° por paso => 360 / 1.8 = 200 pasos/rev
-#define PASOS_REV_M1  200.0f 
-#define ACCEL_MAX_M1  50.0f  // (rad/s²) Estimación segura
-#define VEL_MAX_M1    104.0f // (rad/s) 1000rpm
+// Datasheet: 1.8° por paso => (360 / 1.8 )*20 = 4000 pasos/rev
+#define PASOS_REV_M1  4000.0f 
+#define ACCEL_MAX_M1  4.0f  // (rad/s²) Estimación segura
+#define VEL_MAX_M1    1.25f // (rad/s) 15rpm
 
 // Motor 2 y 3 (24BYJ48)
 // Datasheet: 5.625° por paso y reductora 1:64
@@ -54,7 +54,7 @@
 #define VEL_MAX_M3    0.8f   // (rad/s)
 
 // --- PARÁMETROS DE PRUEBA (Rebote) ---
-#define ACCEL_PRUEBA_STD  2.0f  // Aceleración estándar
-#define ANGULO_PRUEBA_STD 20.0f // El incremento en GRADOS
+#define ACCEL_PRUEBA_STD  3.0f  // Aceleración estándar
+#define ANGULO_PRUEBA_STD 90.0f // El incremento en GRADOS
 
 #endif // DEFINES_H

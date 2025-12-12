@@ -26,7 +26,7 @@ Motor::Motor(gpio_num_t step_pin, gpio_num_t dir_pin, gpio_num_t enable_pin,
 
 // --- Método Principal de Movimiento ---
 void Motor::activarMovimiento(float aceleracion, uint32_t direccion, int pasos_totales) {
-    
+    habilitar();
     // 1. Validación de parámetros
     if (pasos_totales <= 0) return;
 
@@ -124,6 +124,8 @@ void Motor::activarMovimiento(float aceleracion, uint32_t direccion, int pasos_t
 
     // 13. Actualizar posición actual
     posicion_actual = leerPosicion(adc_channel_RESERVED);
+
+    deshabilitar();
 }
 
 // --- Funciones de Ayuda (Implementación) ---
