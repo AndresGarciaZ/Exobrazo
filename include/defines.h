@@ -35,26 +35,23 @@
 #define LIM_MAX_M3    -100.0f // Límite "máximo" (lógica invertida)
 
 // --- PARÁMETROS DE DATASHEET ---
-
+// los 3 motores son de 1.8° por paso (200 pasos/rev) con microstepping 1/20 -> 4000 pasos/rev
 // Motor 1 (42SHDC3025-24B)
-// Datasheet: 1.8° por paso => (360 / 1.8 )*20 = 4000 pasos/rev
 #define PASOS_REV_M1  4000.0f 
 #define ACCEL_MAX_M1  4.0f  // (rad/s²) Estimación segura
-#define VEL_MAX_M1    1.25f // (rad/s) 15rpm
+#define VEL_MAX_M1    1.1f // (rad/s) 10rpm
 
-// Motor 2 y 3 (24BYJ48)
-// Datasheet: 5.625° por paso y reductora 1:64
-// => (360 / 5.625) * 64 = 4096 pasos/rev
-#define PASOS_REV_M2  4096.0f
-#define ACCEL_MAX_M2  1.5f   // (rad/s²) Estimación segura
-#define VEL_MAX_M2    0.8f   // (rad/s) Estimación (5V)
-
-#define PASOS_REV_M3  4096.0f
-#define ACCEL_MAX_M3  1.5f   // (rad/s²)
-#define VEL_MAX_M3    0.8f   // (rad/s)
+// Motor 2 (nema 17, 0.33Nm)
+#define PASOS_REV_M2  4000.0f 
+#define ACCEL_MAX_M2  4.0f   // (rad/s²) Estimación segura
+#define VEL_MAX_M2    1.1f   // (rad/s) Estimación (5V)
+// Motor 3  (nema 17, 0.33Nm)
+#define PASOS_REV_M3  4000.0f
+#define ACCEL_MAX_M3  4.0f   // (rad/s²)
+#define VEL_MAX_M3    1.1f   // (rad/s)
 
 // --- PARÁMETROS DE PRUEBA (Rebote) ---
 #define ACCEL_PRUEBA_STD  3.0f  // Aceleración estándar
-#define ANGULO_PRUEBA_STD 90.0f // El incremento en GRADOS
+#define ANGULO_PRUEBA_STD 20.0f // El incremento en GRADOS
 
 #endif // DEFINES_H
