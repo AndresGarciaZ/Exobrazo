@@ -20,6 +20,9 @@ Motor::Motor(gpio_num_t step_pin, gpio_num_t dir_pin, gpio_num_t enable_pin,
     gpio_set_direction(step_pin, GPIO_MODE_OUTPUT);
     gpio_set_direction(dir_pin, GPIO_MODE_OUTPUT);
     gpio_set_direction(enable_pin, GPIO_MODE_OUTPUT);
+
+    //Configuarion de estado frio del motor (deshabilitado)
+    gpio_set_level(enable_pin, 1);
     
     // --- ¡YA NO CONFIGURAMOS EL ADC AQUÍ! ---
 }
