@@ -14,7 +14,7 @@ private:
     bool estado_logico; 
     
     uint32_t direccion;
-    float aceleracion;
+    float velocidad;
     int pasos;
 
 public:
@@ -35,8 +35,8 @@ public:
      */
     void establecerEstado(bool nuevo_estado);
     
-    float getAceleracion() const { return aceleracion; }
-    int getPasos() const { return pasos; }
+    float getVelocidad() const { return velocidad; }
+    void setVelocidad(float nueva_velocidad) { velocidad = nueva_velocidad; }
 };
 
 #endif // SIGNAL_H

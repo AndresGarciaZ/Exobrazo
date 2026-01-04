@@ -27,12 +27,12 @@
 #define GSIGNAL_PIN   GPIO_NUM_2  // Botón General (buttonPin)
 
 // --- LÍMITES FÍSICOS (Basado en tu .ino de prueba) ---
-#define LIM_MIN_M1    23.0f
-#define LIM_MAX_M1    -110.0f
-#define LIM_MIN_M2    135.0f
-#define LIM_MAX_M2    -92.0f
-#define LIM_MIN_M3    0.0f    // Límite "mínimo" (lógica invertida)
-#define LIM_MAX_M3    135.0f // Límite "máximo" (lógica invertida)
+#define LIM_MIN_M1    -90.0f
+#define LIM_MAX_M1    30.0f
+#define LIM_MIN_M2    -135.0f
+#define LIM_MAX_M2    90.0f
+#define LIM_MIN_M3    -14.0f   
+#define LIM_MAX_M3    135.0f
 
 // --- PARÁMETROS DE DATASHEET ---
 // los 3 motores son de 1.8° por paso (200 pasos/rev) con microstepping 1/20 -> 4000 pasos/rev
@@ -47,11 +47,11 @@
 #define VEL_MAX_M2    1.1f   // (rad/s) Estimación (5V)
 // Motor 3  (nema 17, 0.33Nm)
 #define PASOS_REV_M3  4000.0f
-#define ACCEL_MAX_M3  4.0f   // (rad/s²)
-#define VEL_MAX_M3    1.1f   // (rad/s)
+#define ACCEL_MAX_M3  15.0f   // (rad/s²)
+#define VEL_MAX_M3    1.5f   // (rad/s)
 
 // --- PARÁMETROS DE PRUEBA (Rebote) ---
-#define ACCEL_PRUEBA_STD  3.0f  // Aceleración estándar
+#define VEL_PRUEBA_STD  1.5f  // Velocidad de prueba (rad/s)
 #define ANGULO_PRUEBA_STD 20.0f // El incremento en GRADOS
 
 #endif // DEFINES_H
