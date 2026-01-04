@@ -31,7 +31,7 @@
 #define LIM_MAX_M1    30.0f
 #define LIM_MIN_M2    -135.0f
 #define LIM_MAX_M2    90.0f
-#define LIM_MIN_M3    -14.0f   
+#define LIM_MIN_M3    0.0f   
 #define LIM_MAX_M3    135.0f
 
 // --- PARÁMETROS DE DATASHEET ---

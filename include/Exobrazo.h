@@ -45,8 +45,9 @@ void ejecutarCicloPrincipal();
 // --- API de Control (para la Web) ---
 void setModoWeb();
 
-void moverMotorWeb(int motorIndex, float aceleracion, uint32_t direccion, int pasos);
+void moverMotorWeb(int motorIndex, float vel_custom, uint32_t direccion, float angulo);
 void setModoPrueba();
+void ejecutarMovimientoTerapeutico();
 
 //getter modoActual
 ModoControl getModoActual() const;

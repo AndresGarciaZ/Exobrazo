@@ -1,5 +1,8 @@
 #include "Exobrazo.h"
 #include <esp_timer.h> 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include <math.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -99,17 +102,26 @@ void Exobrazo::ejecutarCicloPrincipal() {
     } 
 }
 
-void Exobrazo::moverMotorWeb(int motorIndex, float vel_custom, uint32_t direccion, int pasos) {
+void Exobrazo::moverMotorWeb(int motorIndex, float vel_custom, uint32_t direccion, float angulo_grados) {
     if (motorIndex < 0 || motorIndex > 2) return;
 
+    // 1. FÓRMULA DE CONVERSIÓN: Grados a Pasos
+    // pasos = (ángulo_deseado / 360) * pasos_totales_por_rev
+    float pasos_por_rev = (float)motores[motorIndex]->getPasosPorRev();
+    int pasos_calculados = (int)((angulo_grados / 360.0f) * pasos_por_rev);
+
+    // Evitar procesar si el cálculo resulta en 0 pasos
+    if (pasos_calculados <= 0) return;
+
+    // 2. Validación de seguridad con la posición actual del ADC
     float posActual = motores[motorIndex]->getPosicionActual();
     
-    // Redundancia de seguridad: comprobar límites antes de activar GPIO
+    // Bloqueo si intenta superar los límites establecidos
     if (direccion == 1 && posActual >= motores[motorIndex]->getLimiteMax()) return;
     if (direccion == 0 && posActual <= motores[motorIndex]->getLimiteMin()) return;
 
-    // Ejecutar con la velocidad recibida desde la web
-    motores[motorIndex]->activarMovimiento(direccion, pasos, vel_custom);
+    // 3. Ejecutar movimiento físico
+    motores[motorIndex]->activarMovimiento(direccion, pasos_calculados, vel_custom);
 }
 
 void Exobrazo::setModoPrueba() { 
@@ -124,4 +136,83 @@ void Exobrazo::setModoWeb() {
 
 Exobrazo::ModoControl Exobrazo::getModoActual() const { 
     return this->modoActual; 
+}
+
+void Exobrazo::ejecutarMovimientoTerapeutico() {
+    // 1. Constantes de Control
+    const float VEL_M1 = 1.0f;
+    const float VEL_M2 = 0.8f;
+    const float VEL_M3 = 0.8f;
+    const float TOLERANCIA = 1.5f; // Margen de error permitido en grados
+    const int MAX_CORRECCIONES = 3; // Intentos para ajustar la posición si falla
+
+    // 2. Factores de Corrección (Offsets)
+    const float offsets[3] = {0.0f, 0.0f, 0.0f};
+    const float vels[3] = {VEL_M1, VEL_M2, VEL_M3};
+
+    /**
+     * Helper de Lazo Cerrado: Mueve, verifica y corrige si es necesario.
+     */
+    auto moverEjeValidado = [&](int id, float anguloObjetivo) {
+        int reintentos = 0;
+        bool enDestino = false;
+
+        while (!enDestino && reintentos < MAX_CORRECCIONES) {
+            // Sincronizar ADC para tener la lectura más reciente
+            motores[id]->leerPosicion(adc_pins[id]);
+            
+            float posReal = motores[id]->getPosicionActual() + offsets[id];
+            float delta = anguloObjetivo - posReal;
+
+            // VALIDACIÓN: ¿Estamos en el lugar correcto?
+            if (fabs(delta) <= TOLERANCIA) {
+                enDestino = true;
+                break;
+            }
+
+            // Si no estamos en destino, calculamos dirección y pasos necesarios
+            uint32_t dir = (delta > 0) ? 1 : 0;
+            int pasos = (int)((fabs(delta) / 360.0f) * motores[id]->getPasosPorRev());
+
+            // Ejecutar movimiento solo si es seguro
+            if (anguloObjetivo >= motores[id]->getLimiteMin() && 
+                anguloObjetivo <= motores[id]->getLimiteMax()) {
+                
+                motores[id]->activarMovimiento(dir, pasos, vels[id]);
+
+                // Esperar a que el motor termine físicamente
+                while (motores[id]->estaOcupado()) {
+                    vTaskDelay(pdMS_TO_TICKS(10));
+                }
+            }
+            reintentos++;
+            vTaskDelay(pdMS_TO_TICKS(50)); // Pausa breve para estabilización del sensor
+        }
+    };
+
+    // --- INICIO DE LA SECUENCIA TERAPÉUTICA VALIDADA ---
+
+    // Paso 0: Posicionamiento Inicial con validación
+    moverEjeValidado(0, 0.0f);   // Base a 0°
+    moverEjeValidado(1, -90.0f); // Hombro a -90°
+    moverEjeValidado(2, 0.0f);   // Codo a 0°
+
+    // Paso 1: Rutina de Motor 2 (Hombro)
+    moverEjeValidado(1, 0.0f);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    moverEjeValidado(1, 90.0f);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    moverEjeValidado(1, 0.0f);
+
+    // Paso 2: Rutina de Motor 3 (Codo)
+    moverEjeValidado(2, 90.0f);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    moverEjeValidado(2, 0.0f);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    // Paso 3: Finalización
+    moverEjeValidado(1, -90.0f);
 }

@@ -19,11 +19,11 @@ Exobrazo exobrazo;
 QueueHandle_t webCommandQueue;
 
 typedef struct {
-    enum class CommandType { MOVE, SET_MODE } type;
+    enum class CommandType { MOVE, SET_MODE, THERAPEUTIC } type;
     int motorIndex;
-    float velocidad; // Mapeado desde el campo 'aceleracion' de la web
+    float velocidad; 
     uint32_t direccion;
-    int pasos;
+    float angulo; // CAMBIADO: De int pasos a float angulo para grados decimales
     Exobrazo::ModoControl modo;
 } WebCommand;
 
@@ -55,15 +55,13 @@ esp_err_t move_handler(httpd_req_t *req) {
     WebCommand cmd;
     cmd.type = WebCommand::CommandType::MOVE;
     cmd.motorIndex = cJSON_GetObjectItem(json, "motorIndex")->valueint;
-    // Interpretamos 'aceleracion' de la web como velocidad física
     cmd.velocidad = (float)cJSON_GetObjectItem(json, "aceleracion")->valuedouble;
     cmd.direccion = cJSON_GetObjectItem(json, "direccion")->valueint;
-    cmd.pasos = cJSON_GetObjectItem(json, "pasos")->valueint;
+    // CAPTURAMOS EL ÁNGULO: La web envía el valor decimal en el campo "pasos"
+    cmd.angulo = (float)cJSON_GetObjectItem(json, "pasos")->valuedouble; 
     cJSON_Delete(json);
 
-    // --- LÓGICA DE LÍMITES PARA LA WEB ---
-    // direccion 1 = Anti-horario (Hacia Positivo/Max)
-    // direccion 0 = Horario (Hacia Negativo/Min)
+    // Validación de límites (usando los grados directamente)
     float pos = exobrazo.motores[cmd.motorIndex]->getPosicionActual();
     bool bloqueado = (cmd.direccion == 1 && pos >= exobrazo.motores[cmd.motorIndex]->getLimiteMax()) || 
                      (cmd.direccion == 0 && pos <= exobrazo.motores[cmd.motorIndex]->getLimiteMin());
@@ -100,6 +98,15 @@ esp_err_t set_mode_handler(httpd_req_t *req) {
     set_cors_headers(req);
     xQueueSend(webCommandQueue, &cmd, pdMS_TO_TICKS(10));
     httpd_resp_send(req, "{\"status\": \"ok\"}", -1);
+    return ESP_OK;
+}
+
+esp_err_t therapy_handler(httpd_req_t *req) {
+    WebCommand cmd;
+    cmd.type = WebCommand::CommandType::THERAPEUTIC;
+    set_cors_headers(req);
+    xQueueSend(webCommandQueue, &cmd, pdMS_TO_TICKS(10));
+    httpd_resp_send(req, "{\"status\": \"ok\", \"message\": \"Secuencia terapeutica iniciada\"}", -1);
     return ESP_OK;
 }
 
@@ -142,10 +149,14 @@ void systemLogicTask(void *pvParameters) {
         if (xQueueReceive(webCommandQueue, &cmd, 0) == pdTRUE) {
             if (cmd.type == WebCommand::CommandType::MOVE) {
                 exobrazo.setModoWeb();
-                exobrazo.moverMotorWeb(cmd.motorIndex, cmd.velocidad, cmd.direccion, cmd.pasos);
+                // PASAMOS EL ÁNGULO: La conversión a pasos se hace dentro de moverMotorWeb
+                exobrazo.moverMotorWeb(cmd.motorIndex, cmd.velocidad, cmd.direccion, cmd.angulo);
             } else if (cmd.type == WebCommand::CommandType::SET_MODE) {
                 if (cmd.modo == Exobrazo::ModoControl::WEB) exobrazo.setModoWeb();
                 else exobrazo.setModoPrueba();
+            } else if (cmd.type == WebCommand::CommandType::THERAPEUTIC) {
+                exobrazo.setModoWeb();
+                exobrazo.ejecutarMovimientoTerapeutico();
             }
         }
         exobrazo.ejecutarCicloPrincipal();
@@ -156,7 +167,7 @@ void systemLogicTask(void *pvParameters) {
 void webServerTask(void *pvParameters) {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.core_id = 0; // Protegemos el Núcleo 1
+    config.core_id = 0; 
 
     if (httpd_start(&server, &config) == ESP_OK) {
         httpd_uri_t uri_move = { .uri = "/move", .method = HTTP_POST, .handler = move_handler };
@@ -165,23 +176,24 @@ void webServerTask(void *pvParameters) {
         httpd_register_uri_handler(server, &uri_status);
         httpd_uri_t uri_mode = { .uri = "/setMode", .method = HTTP_POST, .handler = set_mode_handler };
         httpd_register_uri_handler(server, &uri_mode);
+        httpd_uri_t uri_therapy = { .uri = "/therapy", .method = HTTP_POST, .handler = therapy_handler };
+        httpd_register_uri_handler(server, &uri_therapy);
 
         httpd_uri_t opt_move = { .uri = "/move", .method = HTTP_OPTIONS, .handler = cors_options_handler };
         httpd_register_uri_handler(server, &opt_move);
         httpd_uri_t opt_mode = { .uri = "/setMode", .method = HTTP_OPTIONS, .handler = cors_options_handler };
         httpd_register_uri_handler(server, &opt_mode);
+        httpd_uri_t opt_therapy = { .uri = "/therapy", .method = HTTP_OPTIONS, .handler = cors_options_handler };
+        httpd_register_uri_handler(server, &opt_therapy);
     }
     vTaskDelete(NULL);
 }
 
 extern "C" void app_main(void) {
-    // 1. Inicialización de NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         nvs_flash_erase(); nvs_flash_init();
     }
-    
-    // 2. Inicialización de Red (Restaurada de la versión funcional)
     esp_netif_init();
     esp_event_loop_create_default();
     esp_netif_create_default_wifi_ap();
@@ -195,7 +207,7 @@ extern "C" void app_main(void) {
     memcpy(wifi_config.ap.ssid, ssid, strlen(ssid));
     memcpy(wifi_config.ap.password, pass, strlen(pass));
     wifi_config.ap.ssid_len = strlen(ssid);
-    wifi_config.ap.channel = 1; // Crítico para que el AP sea visible
+    wifi_config.ap.channel = 1;
     wifi_config.ap.authmode = WIFI_AUTH_WPA2_PSK;
     wifi_config.ap.max_connection = 4;
 
@@ -203,7 +215,6 @@ extern "C" void app_main(void) {
     esp_wifi_set_config(WIFI_IF_AP, &wifi_config);
     esp_wifi_start();
 
-    // 3. Configuración ADC (Mantenida de la versión corregida)
     adc1_config_width(ADC_WIDTH_BIT_12);
     adc1_config_channel_atten((adc1_channel_t)ADC_CHANNEL_7, ADC_ATTEN_DB_11);
     adc1_config_channel_atten((adc1_channel_t)ADC_CHANNEL_4, ADC_ATTEN_DB_11);
@@ -212,7 +223,6 @@ extern "C" void app_main(void) {
     webCommandQueue = xQueueCreate(10, sizeof(WebCommand));
     exobrazo.iniciar();
 
-    // 4. Creación de tareas
     xTaskCreatePinnedToCore(motorPulseTask, "PulseTask", 4096, NULL, 24, NULL, 1);
     xTaskCreatePinnedToCore(systemLogicTask, "LogicTask", 8192, NULL, 10, NULL, 0);
     xTaskCreatePinnedToCore(webServerTask, "WebTask", 10240, NULL, 5, NULL, 0);
