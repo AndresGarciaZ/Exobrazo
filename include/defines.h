@@ -26,7 +26,7 @@
 #define SIGNAL_PIN_3  GPIO_NUM_34 // Botón individual 3 (individualButtonPins[2])
 #define GSIGNAL_PIN   GPIO_NUM_2  // Botón General (buttonPin)
 
-// --- LÍMITES FÍSICOS (Basado en tu .ino de prueba) ---
+// --- LÍMITES FÍSICOS ---
 #define LIM_MIN_M1    -90.0f
 #define LIM_MAX_M1    30.0f
 #define LIM_MIN_M2    -135.0f
